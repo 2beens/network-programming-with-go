@@ -2,13 +2,12 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net"
 	"os"
 	"os/signal"
 	"time"
-
-	"fmt"
 
 	"github.com/2beens/network-programming-with-go/my_tests/desktop_laptop_connection"
 	"github.com/gosuri/uiprogress"
@@ -67,7 +66,7 @@ func listenForConnections(ctx context.Context) {
 
 func handleNewConnection(conn net.Conn) {
 	defer func() {
-		golog.Infof("closing connection with %s", conn.RemoteAddr())
+		//golog.Infof("closing connection with %s", conn.RemoteAddr())
 		if err := conn.Close(); err != nil {
 			golog.Errorf("failed to properly close connection %s: %s", conn.RemoteAddr(), err)
 		}
@@ -83,57 +82,41 @@ func handleNewConnection(conn net.Conn) {
 		golog.Error(err)
 	}
 
-	//var typ int8
-	//err := binary.Read(conn, binary.BigEndian, &typ) // 1-byte type
-	//if err != nil {
-	//	return 0, err
-	//}
-
+	closedReasonMessage := "closed!"
 	buf := make([]byte, 1)
 	for {
 		// every time we receive a new input from the client, we move the read/write deadline
 		if err := conn.SetDeadline(time.Now().Add(time.Minute)); err != nil {
-			golog.Errorf("failed to set read/write deadline for %s: %s", conn.RemoteAddr(), err)
+			closedReasonMessage = fmt.Sprintf("failed to set read/write deadline for %s: %s", conn.RemoteAddr(), err)
 			break
 		}
 
 		_, err := conn.Read(buf)
-		if err != nil && err != io.EOF {
-			golog.Errorf("failed to read data from connection %s: %s", conn.RemoteAddr(), err)
+		if err != nil {
+			if err != io.EOF {
+				closedReasonMessage = fmt.Sprintf("failed to read data from connection %s: %s", conn.RemoteAddr(), err)
+			}
 			break
 		}
+		//golog.Debugf("read %d bytes: %q", n, string(buf))
 
 		controlVal := string(buf)
-		//golog.Debugf("read %d bytes: %s", n, controlVal)
-		switch controlVal {
-		case desktop_laptop_connection.ControlIncrease:
+		if controlVal == desktop_laptop_connection.ControlIncrease {
 			bar.Incr()
-		case desktop_laptop_connection.ControlDecrease:
+			continue
+		}
+		if controlVal == desktop_laptop_connection.ControlDecrease {
 			if err := bar.Set(bar.Current() - 1); err != nil {
 				golog.Error(err)
 			}
-		default:
-			golog.Errorf("unknown control value: %+v", controlVal)
+			continue
 		}
-	}
-}
 
-func progressBarExample() {
-	uiprogress.Start()            // start rendering
-	bar := uiprogress.AddBar(100) // Add a new bar
-	bar.PrependFunc(func(b *uiprogress.Bar) string {
-		return "app: "
-	})
-	for bar.Incr() {
-		time.Sleep(time.Millisecond * 20)
-		if bar.Current() == 50 {
-			//if err := bar.Set(10); err != nil {
-			//	golog.Fatal(err)
-			//}
-			bar.AppendFunc(func(b *uiprogress.Bar) string {
-				return "done"
-			})
-			break
-		}
+		closedReasonMessage = fmt.Sprintf("unknown control value: %+v", controlVal)
+		break
 	}
+
+	bar.AppendFunc(func(b *uiprogress.Bar) string {
+		return closedReasonMessage
+	})
 }

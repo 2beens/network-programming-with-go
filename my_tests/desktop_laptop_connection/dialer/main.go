@@ -1,6 +1,8 @@
 package main
 
 import (
+	"flag"
+	"fmt"
 	"net"
 
 	"github.com/2beens/network-programming-with-go/my_tests/desktop_laptop_connection"
@@ -10,9 +12,15 @@ import (
 
 func main() {
 	golog.SetLevel("debug")
-	golog.Infof("dialer starting [%s] ...", desktop_laptop_connection.ListenerAddress)
 
-	conn, err := net.Dial("tcp", desktop_laptop_connection.ListenerAddress)
+	listenAddr := flag.String("addr", "", "listen address, e.g. 192.168.178.1")
+	listenPort := flag.String("port", "9999", "listen port, e.g. 9999")
+	flag.Parse()
+	endpoint := fmt.Sprintf("%s:%s", *listenAddr, *listenPort)
+
+	golog.Infof("dialer starting [%s] ...", endpoint)
+
+	conn, err := net.Dial("tcp", endpoint)
 	if err != nil {
 		golog.Fatal(err)
 	}

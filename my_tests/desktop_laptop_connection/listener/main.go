@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"io"
 	"net"
@@ -16,11 +17,17 @@ import (
 
 func main() {
 	golog.SetLevel("debug")
-	golog.Infof("listener starting [%s] ...", desktop_laptop_connection.ListenerAddress)
+
+	listenAddr := flag.String("addr", "", "listen address, e.g. 192.168.178.1")
+	listenPort := flag.String("port", "9999", "listen port, e.g. 9999")
+	flag.Parse()
+	endpoint := fmt.Sprintf("%s:%s", *listenAddr, *listenPort)
+
+	golog.Infof("listener starting [%s] ...", endpoint)
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
 
-	go listenForConnections(ctx)
+	go listenForConnections(ctx, endpoint)
 
 	localIp, err := desktop_laptop_connection.GetLocalIp()
 	if err != nil {
@@ -37,8 +44,8 @@ func main() {
 	cancelFunc()
 }
 
-func listenForConnections(ctx context.Context) {
-	listener, err := net.Listen("tcp", desktop_laptop_connection.ListenerAddress)
+func listenForConnections(ctx context.Context, endpoint string) {
+	listener, err := net.Listen("tcp", endpoint)
 	if err != nil {
 		golog.Fatal(err)
 	}

@@ -9,6 +9,7 @@ import (
 
 const (
 	ListenerAddress = "127.0.0.1:9999"
+	//ListenerAddress = "192.168.178.1:9999"
 	ControlIncrease = "1"
 	ControlDecrease = "2"
 )

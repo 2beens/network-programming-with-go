@@ -22,6 +22,13 @@ func main() {
 
 	go listenForConnections(ctx)
 
+	localIp, err := desktop_laptop_connection.GetLocalIp()
+	if err != nil {
+		golog.Errorf("failed to get local ip: %s", err)
+	} else {
+		golog.Warnf("local ip: %s", localIp)
+	}
+
 	chOsInterrupt := make(chan os.Signal, 1)
 	signal.Notify(chOsInterrupt, os.Interrupt)
 	<-chOsInterrupt

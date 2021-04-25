@@ -102,7 +102,8 @@ func listenForConnections(ctx context.Context, endpoint string) {
 
 			err = proxy(client, server)
 			if err != nil && err != io.EOF {
-				golog.Errorf("failed to proxy request: %s", err)
+				golog.Errorf("%% failed to proxy request: %s", err)
+				break
 			}
 		}
 	}()

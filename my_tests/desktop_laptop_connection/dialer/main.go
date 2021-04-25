@@ -15,17 +15,35 @@ func main() {
 
 	listenAddr := flag.String("addr", "", "listen address, e.g. 192.168.178.1")
 	listenPort := flag.String("port", "9999", "listen port, e.g. 9999")
+	proxyAddr := flag.String("proxy", "", "route via proxy (empty for no proxy), e.g. 127.0.0.1:9998")
 	flag.Parse()
 	endpoint := fmt.Sprintf("%s:%s", *listenAddr, *listenPort)
 
 	golog.Infof("dialer starting [%s] ...", endpoint)
 
-	conn, err := net.Dial("tcp", endpoint)
-	if err != nil {
-		golog.Fatal(err)
+	var (
+		err  error
+		conn net.Conn
+	)
+	if *proxyAddr == "" {
+		conn, err = net.Dial("tcp", endpoint)
+		if err != nil {
+			golog.Fatal(err)
+		}
+	} else {
+		golog.Debug("connecting via proxy ...")
+		conn, err = net.Dial("tcp", *proxyAddr)
+		if err != nil {
+			golog.Fatal(err)
+		}
+
+		_, err = conn.Write([]byte("client"))
+		if err != nil {
+			golog.Fatal(err)
+		}
 	}
 
-	golog.Infof("connection established")
+	golog.Infof("connection established with %s", conn.RemoteAddr())
 
 	if err := keyboard.Open(); err != nil {
 		panic(err)
@@ -38,25 +56,26 @@ func main() {
 
 	golog.Warn("press ESC to quit")
 	for {
-		_, key, err := keyboard.GetKey()
+		keyRune, key, err := keyboard.GetKey()
 		if err != nil {
 			golog.Fatal(err)
 		}
 
-		switch key {
-		case keyboard.KeyArrowUp:
+		switch {
+		case key == keyboard.KeyArrowUp:
 			golog.Debugf("^")
 			_, err = conn.Write([]byte(desktop_laptop_connection.ControlIncrease))
 			if err != nil {
 				golog.Error(err)
 			}
-		case keyboard.KeyArrowDown:
+		case key == keyboard.KeyArrowDown:
 			golog.Debugf("v")
 			_, err = conn.Write([]byte(desktop_laptop_connection.ControlDecrease))
 			if err != nil {
 				golog.Error(err)
 			}
-		case keyboard.KeyEsc:
+		case key == keyboard.KeyEsc,
+			keyRune == 113: // keyRune 113 = q
 			golog.Warn("closing connection")
 			if err := conn.Close(); err != nil {
 				golog.Error(err)
